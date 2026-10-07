@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>フリーランスの手取りシミュレーター｜所得税・住民税・事業税・国保・年金の概算 | ひとり会社ラボ</title>
+<meta name="description" content="売上と経費を入力すると、所得税・住民税・個人事業税・国民健康保険・国民年金の概算と手取りを表示する無料ツール。国民健康保険の料率は自分の自治体の値に変更できます。前提条件と根拠の公式情報を明記しています。">
+<link rel="canonical" href="https://mizupants-cyber.github.io/freelance-tedori-simulator/">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header class="site"><a href="/" class="logo">ひとり会社ラボ</a><span class="tag">フリーランス・ひとり法人のお金と仕事</span></header>
+<div class="pr">本サイトはアフィリエイト広告（PR）を利用しています。紹介する商品・サービスのリンクから申し込みがあった場合、運営者が報酬を受け取ることがあります。</div>
+<main><article><p class="meta">計算ツール ・ 2026-10-08</p><h1>フリーランスの手取りシミュレーター｜所得税・住民税・事業税・国保・年金の概算</h1><div class="box"><strong>このツールでわかること</strong><br>個人事業主（青色申告・事業所得のみ）の売上と経費を入力すると、所得税・住民税・個人事業税・国民健康保険・国民年金の概算と、そこから見た手取りを表示します。<strong>あくまで概算</strong>です。実際の金額は、お住まいの自治体・家族構成・各種控除によって変わります。計算の考え方は<a href="/freelance-tedori-keisan/">フリーランスの手取りの計算方法</a>で解説しています。</div>
+
+<style>
+.tl{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:1em 0}
+.tl label{display:block;font-size:14px;margin:10px 0 2px;font-weight:700}
+.tl input,.tl select{width:100%;max-width:340px;padding:8px;font-size:16px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.tl details{margin-top:12px}.tl summary{cursor:pointer;font-weight:700}
+.tl .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.tl button{margin-top:14px;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 22px;font-size:16px;font-weight:700;cursor:pointer}
+#tl-result table{display:table}#tl-result td.n{text-align:right;white-space:nowrap}
+#tl-result tr.total td{font-weight:700;background:var(--card)}
+#tl-err{color:#b91c1c;font-weight:700}
+</style>
+
+<h2>入力</h2>
+<div class="tl" id="tl-form">
+<label for="tl-year">適用する年分（所得税の基礎控除）</label>
+<select id="tl-year"><option value="r8">令和8年分・令和9年分（令和8年12月1日施行の改正後）</option><option value="r7">令和7年分</option></select>
+<label for="tl-sales">年間の売上（万円）</label>
+<input id="tl-sales" type="number" inputmode="decimal" min="0" step="1" value="700">
+<label for="tl-exp">年間の経費（万円）</label>
+<input id="tl-exp" type="number" inputmode="decimal" min="0" step="1" value="150">
+<label for="tl-blue">青色申告特別控除</label>
+<select id="tl-blue"><option value="650000">65万円（要件あり）</option><option value="550000">55万円（要件あり）</option><option value="100000">10万円</option><option value="0">なし（白色申告など）</option></select>
+<label for="tl-age">国民健康保険の介護分（40〜64歳のみ対象）</label>
+<select id="tl-age"><option value="0">40歳未満・65歳以上（介護分なし）</option><option value="1">40〜64歳（介護分あり）</option></select>
+<label for="tl-pension">国民年金の月額保険料（円）</label>
+<input id="tl-pension" type="number" inputmode="numeric" min="0" step="10" value="17920">
+<label for="tl-juki">住民税の均等割（円・森林環境税を含む）</label>
+<input id="tl-juki" type="number" inputmode="numeric" min="0" step="100" value="5000">
+<label for="tl-bizrate">個人事業税の税率</label>
+<select id="tl-bizrate"><option value="5">5%（第1種事業・第3種事業の多く）</option><option value="4">4%（第2種事業）</option><option value="3">3%（第3種事業の一部）</option><option value="0">課税されない（対象外の場合）</option></select>
+
+<details open><summary>国民健康保険の料率（自分の自治体の値に変更してください）</summary>
+<p class="meta">初期値は東京都新宿区の令和8年度の公表値です（1人世帯・未就学児なし・軽減措置なしの前提）。ほかの自治体にお住まいの場合は、自治体の公式サイトの値に書き換えてください。</p>
+<div class="row">
+<div><label for="k-m-r">医療分 所得割（%）</label><input id="k-m-r" type="number" step="0.01" value="7.51"></div>
+<div><label for="k-m-e">医療分 均等割（円）</label><input id="k-m-e" type="number" step="1" value="47600"></div>
+<div><label for="k-m-l">医療分 限度額（円）</label><input id="k-m-l" type="number" step="1" value="670000"></div>
+<div><label for="k-s-r">支援金分 所得割（%）</label><input id="k-s-r" type="number" step="0.01" value="2.80"></div>
+<div><label for="k-s-e">支援金分 均等割（円）</label><input id="k-s-e" type="number" step="1" value="17600"></div>
+<div><label for="k-s-l">支援金分 限度額（円）</label><input id="k-s-l" type="number" step="1" value="260000"></div>
+<div><label for="k-c-r">介護分 所得割（%）</label><input id="k-c-r" type="number" step="0.01" value="2.43"></div>
+<div><label for="k-c-e">介護分 均等割（円）</label><input id="k-c-e" type="number" step="1" value="17800"></div>
+<div><label for="k-c-l">介護分 限度額（円）</label><input id="k-c-l" type="number" step="1" value="170000"></div>
+<div><label for="k-k-r">子ども・子育て支援金分 所得割（%）</label><input id="k-k-r" type="number" step="0.01" value="0.27"></div>
+<div><label for="k-k-e">同 均等割（円）</label><input id="k-k-e" type="number" step="1" value="1873"></div>
+<div><label for="k-k-l">同 限度額（円）</label><input id="k-k-l" type="number" step="1" value="30000"></div>
+</div></details>
+<button type="button" id="tl-go">概算を計算する</button>
+<p id="tl-err"></p>
+</div>
+
+<h2>結果</h2>
+<div id="tl-result"><p class="meta">「概算を計算する」を押すと、ここに結果が表示されます。</p></div>
+
+<h2>前提条件（必ずお読みください）</h2>
+<ul>
+<li>事業所得のみ（売上－経費）がある1人世帯を想定しています。給与所得・不動産所得・配偶者や扶養親族、iDeCoや小規模企業共済、医療費控除などの各種控除は含みません。</li>
+<li>事業所得は「売上－経費－青色申告特別控除」として計算します。青色申告特別控除は事業所得を上限とします。</li>
+<li>入力した1年分の所得が、そのまま各税・保険料の計算に使われるものとして計算します。実際の住民税・個人事業税・国民健康保険料は<strong>前年の所得</strong>をもとに翌年以降に請求されるため、請求の時期とは一致しません。</li>
+<li>所得税は、基礎控除と社会保険料控除（国民健康保険料と国民年金保険料の全額）を差し引いた課税所得に、税率表と復興特別所得税（税額の2.1%）を適用しています。</li>
+<li>住民税は、基礎控除（合計所得金額2,400万円以下で43万円）と社会保険料控除を差し引いた課税所得に所得割10%と均等割を加えます。調整控除、ふるさと納税、住宅ローン控除などは含みません。政令指定都市も税率の合計は10%です。</li>
+<li>個人事業税は、青色申告特別控除を加算した所得から事業主控除290万円を引き、選択した税率を掛けます。通年営業を前提としており、事業を行った期間が1年未満の場合の月割控除は考慮していません。ご自身の業種が課税対象か、税率がいくらかは、都道府県税事務所で確認してください。</li>
+<li>国民健康保険料は、「所得（青色申告特別控除後の事業所得）から基礎控除43万円を引いた額」に所得割率を掛け、均等割を加え、各区分の限度額で頭打ちにします。世帯の人数、未就学児の減額、所得が低い場合の軽減措置、自治体独自の計算方法は反映していません。国民健康保険の料率は自治体で異なります。</li>
+<li>国民年金は、入力した月額×12か月で計算します（初期値は令和8年度の月額17,920円。付加保険料・免除・納付猶予は考慮しません）。</li>
+<li>手取りは「売上－経費－（所得税・住民税・個人事業税・国民健康保険料・国民年金保険料）」です。消費税、生活費、貯蓄は含みません。</li>
+<li>各金額は1円未満を切り捨てています。実際の確定申告・納税通知書の金額と数円〜数千円ずれることがあります。</li>
+</ul>
+<p class="meta">免責：このツールは一般的な情報提供と概算を目的としたもので、税務・社会保険の個別の助言ではありません。計算結果の正確性・完全性を保証するものではなく、利用による損害について当サイトは責任を負いません。申告や納付、法人化などの判断は、税理士・税務署・自治体・年金事務所などの専門家・公的機関の最新の情報で確認してください。</p>
+
+<h2>計算に使った数字と公式情報</h2>
+<table><tr><th>項目</th><th>使用した値</th><th>確認した公式情報</th></tr>
+<tr><td>所得税の税率</td><td>5%（〜194.9万円）／10%（控除97,500円）／20%（控除427,500円）／23%（控除636,000円）／33%（控除1,536,000円）／40%（控除2,796,000円）／45%（控除4,796,000円）。課税所得は1,000円未満切り捨て</td><td><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" rel="noopener">国税庁 タックスアンサー No.2260</a>（令和8年4月1日現在法令等）</td></tr>
+<tr><td>復興特別所得税</td><td>基準所得税額の2.1%（令和19年分まで。令和9年1月1日以降は1.1%に引き下げ予定との記載あり）</td><td>同上（No.2260）。このツールは2.1%で計算</td></tr>
+<tr><td>所得税の基礎控除</td><td>令和7年分：合計所得132万円以下95万円／336万円以下88万円／489万円以下68万円／655万円以下63万円／2,350万円以下58万円。令和8・9年分：489万円以下104万円／655万円以下67万円／2,350万円以下62万円。いずれも2,350万円超2,400万円以下48万円／2,450万円以下32万円／2,500万円以下16万円／2,500万円超0円</td><td><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" rel="noopener">国税庁 タックスアンサー No.1199</a>（令和8年4月1日現在法令等。令和8年分の規定は令和8年12月1日施行）</td></tr>
+<tr><td>青色申告特別控除</td><td>65万円・55万円・10万円（要件は公式情報を参照）</td><td><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" rel="noopener">国税庁 タックスアンサー No.2072</a></td></tr>
+<tr><td>住民税の所得割・均等割</td><td>所得割10%（道府県4%・市町村6%）。均等割は標準で4,000円（道府県1,000円・市町村3,000円）に、森林環境税（国税）1,000円が併せて徴収され、初期値は合計5,000円。自治体が税率を定めるため変更できます</td><td><a href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/150790_06.html" rel="noopener">総務省 地方税制度 個人住民税</a>、<a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" rel="noopener">東京都主税局 個人住民税</a></td></tr>
+<tr><td>住民税の基礎控除</td><td>合計所得金額2,400万円以下で43万円。2,400万円超2,450万円以下29万円／2,500万円以下15万円／2,500万円超0円</td><td><a href="https://www.city.nagano.nagano.jp/n062000/contents/p005567.html" rel="noopener">長野市 基礎控除額（住民税）</a>、<a href="https://www.city.shinjuku.lg.jp/hoken/hoken01_001028.html" rel="noopener">新宿区 保険料の計算方法</a>の記載（算定基礎額＝総所得金額等－43万円）</td></tr>
+<tr><td>個人事業税</td><td>事業主控除は年290万円。税率は第1種事業（物品販売業、請負業、製造業など）と第3種事業（デザイン業、コンサルタント業など）の多くが5%、第2種事業が4%、あん摩マッサージ指圧等が3%。青色申告特別控除は適用がなく所得に加算</td><td><a href="https://www.tax.metro.tokyo.lg.jp/kazei/kojin_ji.html" rel="noopener">東京都主税局 個人事業税</a></td></tr>
+<tr><td>国民年金保険料</td><td>令和8年度（令和8年4月〜令和9年3月）は月額17,920円</td><td><a href="https://www.nenkin.go.jp/faq/kokunen/seido/hokenryo/seidosetsumei/20150331.html" rel="noopener">日本年金機構 国民年金保険料</a></td></tr>
+<tr><td>国民健康保険料の初期値</td><td>東京都新宿区 令和8年度：医療分7.51%・47,600円・限度67万円、支援金分2.80%・17,600円・限度26万円、介護分2.43%・17,800円・限度17万円、子ども・子育て支援金分0.27%・1,873円・限度3万円</td><td><a href="https://www.city.shinjuku.lg.jp/hoken/hoken01_001028.html" rel="noopener">新宿区 保険料の計算方法</a>（最終更新日2026年4月1日）</td></tr></table>
+<p class="meta">確認日：2026-10-08。税制や保険料は改正・改定されることがあります。最新の値は、リンク先の公式サイトで必ず確認してください。公式サイトで確認できなかった項目は、このツールには組み込んでいません。</p>
+
+<h2>結果の見方と次の一手</h2>
+<ul>
+<li>手取りが想定より少なかった場合は、売上を増やす、経費を見直す、控除の要件を満たす（青色申告特別控除65万円など）といった打ち手があります。会計ソフトの選び方は<a href="/kaikei-soft-erabikata/">会計ソフトの選び方</a>で整理しています。</li>
+<li>所得が増えてきたら、<a href="/freelance-hojinka-timing/">フリーランスが法人化を検討する売上・所得の目安</a>も確認してください。法人化の判断は税理士への相談をおすすめします。</li>
+<li>案件探しの選択肢は<a href="/freelance-engineer-agent-hikaku/">フリーランスエンジニア向けエージェントの比較</a>、入金までのつなぎ資金が必要なときは<a href="/freelance-factoring-hikaku/">報酬を即日で受け取るサービスの比較</a>で整理しています（手数料が高いことに注意してください）。</li>
+</ul>
+<p>税理士に相談したい場合は、無料の紹介サービスもあります（紹介料は無料と公式サイトに記載されています。税理士への報酬は別途かかります）。</p>
+<p><a class="btn" href="https://www.zeiri4.com/" rel="noopener">税理士ドットコムの公式サイトで紹介の流れを確認する</a></p>
+<p class="meta">※当サイトはアフィリエイト広告を利用しています。税理士ドットコムは現時点で当サイトとの提携手続き中のため、上記は公式サイトへの通常のリンクです。当サイトは同サービスを実際には利用しておらず、公式サイトの記載をもとに紹介しています。</p>
+<p class="meta">情報の確認日: 2026-10-08</p>
+
+<script>
+(function (root) {
+  "use strict";
+  var TAX_BRACKETS = [
+    [1950000, 0.05, 0], [3300000, 0.10, 97500], [6950000, 0.20, 427500],
+    [9000000, 0.23, 636000], [18000000, 0.33, 1536000], [40000000, 0.40, 2796000],
+    [Infinity, 0.45, 4796000]
+  ];
+  // 所得税の基礎控除（国税庁 No.1199）。income = 合計所得金額
+  function incomeTaxBasicDeduction(income, year) {
+    if (year === "r7") {
+      if (income <= 1320000) return 950000;
+      if (income <= 3360000) return 880000;
+      if (income <= 4890000) return 680000;
+      if (income <= 6550000) return 630000;
+      if (income <= 23500000) return 580000;
+    } else {
+      if (income <= 4890000) return 1040000;
+      if (income <= 6550000) return 670000;
+      if (income <= 23500000) return 620000;
+    }
+    if (income <= 24000000) return 480000;
+    if (income <= 24500000) return 320000;
+    if (income <= 25000000) return 160000;
+    return 0;
+  }
+  // 住民税の基礎控除（長野市・新宿区の公式ページの記載）
+  function residentBasicDeduction(income) {
+    if (income <= 24000000) return 430000;
+    if (income <= 24500000) return 290000;
+    if (income <= 25000000) return 150000;
+    return 0;
+  }
+  function floorK(x) { return Math.floor(x / 1000) * 1000; }
+  function incomeTaxOf(taxable) {
+    if (taxable <= 0) return 0;
+    for (var i = 0; i < TAX_BRACKETS.length; i++) {
+      if (taxable < TAX_BRACKETS[i][0] || i === TAX_BRACKETS.length - 1) {
+        // 速算表（税率は整数%のため整数演算で厳密に計算）
+        return Math.floor(taxable * Math.round(TAX_BRACKETS[i][1] * 100) / 100) - TAX_BRACKETS[i][2];
+      }
+    }
+    return 0;
+  }
+  function kokuhoPart(base, ratePct, perCapita, limit, applies) {
+    if (!applies) return 0;
+    var bp = Math.round(ratePct * 100); // 基準点（0.01%単位）で整数演算
+    var v = Math.floor(base * bp / 10000) + perCapita;
+    return Math.min(v, limit);
+  }
+  function calc(p) {
+    var income0 = p.sales - p.expenses;                       // 青色控除前の事業所得
+    var blue = Math.min(p.blue, Math.max(0, income0));        // 青色申告特別控除（事業所得が上限）
+    var income = Math.max(0, income0 - blue);                 // 青色控除後の事業所得＝合計所得金額
+    var kBase = Math.max(0, income - 430000);                 // 国保の算定基礎額
+    var k = p.kokuho, over40 = p.over40 === true;
+    var kM = kokuhoPart(kBase, k.m.r, k.m.e, k.m.l, true);
+    var kS = kokuhoPart(kBase, k.s.r, k.s.e, k.s.l, true);
+    var kC = kokuhoPart(kBase, k.c.r, k.c.e, k.c.l, over40);
+    var kK = kokuhoPart(kBase, k.k.r, k.k.e, k.k.l, true);
+    var kokuho = kM + kS + kC + kK;
+    var pension = p.pensionMonthly * 12;
+    var shaho = kokuho + pension;                             // 社会保険料控除の対象
+    var itBasic = incomeTaxBasicDeduction(income, p.year);
+    var itTaxable = Math.max(0, floorK(income - itBasic - shaho));
+    var itBase = incomeTaxOf(itTaxable);
+    var reconstruction = Math.floor(itBase * 21 / 1000);      // 復興特別所得税 2.1%
+    var incomeTax = itBase + reconstruction;
+    var rBasic = residentBasicDeduction(income);
+    var rTaxable = Math.max(0, floorK(income - rBasic - shaho));
+    var resident = Math.floor(rTaxable / 10) + p.residentPerCapita; // 所得割10%＋均等割
+    var bizBase = Math.max(0, income0 - 2900000);             // 青色控除を加算し、事業主控除290万円を差引
+    var bizTax = Math.floor(bizBase * p.bizRate / 100);
+    var total = kokuho + pension + incomeTax + resident + bizTax;
+    return {
+      income0: income0, blue: blue, income: income,
+      kokuho: kokuho, kokuhoParts: { m: kM, s: kS, c: kC, k: kK },
+      pension: pension, shaho: shaho,
+      itBasic: itBasic, itTaxable: itTaxable, itBase: itBase, reconstruction: reconstruction, incomeTax: incomeTax,
+      rBasic: rBasic, rTaxable: rTaxable, resident: resident,
+      bizBase: bizBase, bizTax: bizTax,
+      total: total, takehome: income0 - total
+    };
+  }
+  root.TedoriCalc = { calc: calc, incomeTaxBasicDeduction: incomeTaxBasicDeduction, residentBasicDeduction: residentBasicDeduction, incomeTaxOf: incomeTaxOf };
+
+  if (typeof document === "undefined") return;
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : NaN; }
+  function yen(n) { return Math.round(n).toLocaleString("ja-JP") + "円"; }
+  function run() {
+    var err = $("tl-err"); err.textContent = "";
+    var vals = ["tl-sales", "tl-exp", "tl-pension", "tl-juki", "k-m-r", "k-m-e", "k-m-l", "k-s-r", "k-s-e", "k-s-l", "k-c-r", "k-c-e", "k-c-l", "k-k-r", "k-k-e", "k-k-l"].map(num);
+    for (var i = 0; i < vals.length; i++) {
+      if (isNaN(vals[i]) || vals[i] < 0) { err.textContent = "入力に未入力または負の値があります。0以上の数値を入力してください。"; return; }
+    }
+    var p = {
+      year: $("tl-year").value,
+      sales: Math.round(num("tl-sales") * 10000), expenses: Math.round(num("tl-exp") * 10000),
+      blue: parseInt($("tl-blue").value, 10), over40: $("tl-age").value === "1",
+      pensionMonthly: num("tl-pension"), residentPerCapita: num("tl-juki"), bizRate: parseInt($("tl-bizrate").value, 10),
+      kokuho: {
+        m: { r: num("k-m-r"), e: num("k-m-e"), l: num("k-m-l") }, s: { r: num("k-s-r"), e: num("k-s-e"), l: num("k-s-l") },
+        c: { r: num("k-c-r"), e: num("k-c-e"), l: num("k-c-l") }, k: { r: num("k-k-r"), e: num("k-k-e"), l: num("k-k-l") }
+      }
+    };
+    var r = calc(p);
+    var warn = p.expenses > p.sales ? "<p class=\"meta\">経費が売上を上回っているため、事業所得は0円（赤字）として扱っています。</p>" : "";
+    var rate = p.sales > 0 ? (r.total / p.sales * 100).toFixed(1) + "%" : "-";
+    var rows = [
+      ["売上", p.sales, ""], ["経費", -p.expenses, ""],
+      ["事業所得（青色申告特別控除前）", r.income0, "売上－経費"],
+      ["青色申告特別控除", -r.blue, ""],
+      ["事業所得（控除後）", r.income, ""]
+    ];
+    var h = "<table><tr><th>項目</th><th>金額</th><th>メモ</th></tr>";
+    rows.forEach(function (x) { h += "<tr><td>" + x[0] + "</td><td class=\"n\">" + yen(x[1]) + "</td><td>" + x[2] + "</td></tr>"; });
+    h += "<tr><td>国民健康保険料（概算）</td><td class=\"n\">" + yen(r.kokuho) + "</td><td>医療 " + yen(r.kokuhoParts.m) + "／支援金 " + yen(r.kokuhoParts.s) + "／介護 " + yen(r.kokuhoParts.c) + "／子ども・子育て " + yen(r.kokuhoParts.k) + "</td></tr>";
+    h += "<tr><td>国民年金保険料</td><td class=\"n\">" + yen(r.pension) + "</td><td>月額 × 12か月</td></tr>";
+    h += "<tr><td>所得税＋復興特別所得税</td><td class=\"n\">" + yen(r.incomeTax) + "</td><td>基礎控除 " + yen(r.itBasic) + "／課税所得 " + yen(r.itTaxable) + "／所得税 " + yen(r.itBase) + "＋復興 " + yen(r.reconstruction) + "</td></tr>";
+    h += "<tr><td>住民税（所得割＋均等割）</td><td class=\"n\">" + yen(r.resident) + "</td><td>基礎控除 " + yen(r.rBasic) + "／課税所得 " + yen(r.rTaxable) + "</td></tr>";
+    h += "<tr><td>個人事業税</td><td class=\"n\">" + yen(r.bizTax) + "</td><td>課税標準 " + yen(r.bizBase) + "（事業主控除290万円を差引後）</td></tr>";
+    h += "<tr class=\"total\"><td>税金・社会保険料の合計</td><td class=\"n\">" + yen(r.total) + "</td><td>売上に対して " + rate + "</td></tr>";
+    h += "<tr class=\"total\"><td>手取り（概算）</td><td class=\"n\">" + yen(r.takehome) + "</td><td>月あたり 約" + yen(r.takehome / 12) + "</td></tr></table>";
+    h += warn + "<p class=\"meta\">概算です。前提条件と免責は下記をご確認ください。確認日：2026-10-08</p>";
+    $("tl-result").innerHTML = h;
+  }
+  $("tl-go").addEventListener("click", run);
+  run();
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+</article></main>
+<footer class="site"><a href="/about/">運営者情報・広告ポリシー</a> ・ © ひとり会社ラボ</footer>
+</body></html>
